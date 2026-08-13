@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>Possible Duplicate</title></head>
+<body>
+    <h1>⚠️ Possible Duplicate Detected</h1>
+
+    <p>This invoice looks very similar to an existing one:</p>
+
+    <ul>
+        <li><strong>Match score:</strong> {{ match_score|floatformat:1 }}%</li>
+        {% if matched_invoice %}
+            <li><strong>Matches invoice #:</strong> {{ matched_invoice.invoice_number }}</li>
+            <li><strong>Seller:</strong> {{ matched_invoice.seller_name }}</li>
+            <li><strong>Uploaded by:</strong> {{ matched_invoice.uploaded_by }}</li>
+            <li><strong>Uploaded on:</strong> {{ matched_invoice.created_at }}</li>
+        {% endif %}
+    </ul>
+
+    <form method="post" action="{% url 'confirm_upload' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit">Save anyway</button>
+    </form>
+
+    <form method="post" action="{% url 'cancel_upload' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit">Cancel</button>
+    </form>
+</body>
+</html>

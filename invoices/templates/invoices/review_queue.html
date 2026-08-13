@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><title>Review Queue</title></head>
+<body>
+    <h1>Invoices Needing Review</h1>
+
+    {% if invoices %}
+        <table border="1" cellpadding="8">
+            <tr>
+                <th>Invoice #</th>
+                <th>Seller</th>
+                <th>Amount</th>
+                <th>Match Score</th>
+                <th>Matches Invoice #</th>
+                <th>Uploaded By</th>
+                <th>Action</th>
+            </tr>
+            {% for inv in invoices %}
+            <tr>
+                <td>{{ inv.invoice_number }}</td>
+                <td>{{ inv.seller_name }}</td>
+                <td>{{ inv.total_amount }}</td>
+                <td>{{ inv.match_score|floatformat:1 }}%</td>
+                <td>{% if inv.matched_invoice %}{{ inv.matched_invoice.invoice_number }}{% else %}-{% endif %}</td>
+                <td>{{ inv.uploaded_by }}</td>
+                <td>
+                    <form method="post" action="{% url 'review_decision' inv.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" name="decision" value="approve">Approve (mark as new)</button>
+                        <button type="submit" name="decision" value="reject">Reject (mark as duplicate)</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No invoices currently need review.</p>
+    {% endif %}
+</body>
+</html>

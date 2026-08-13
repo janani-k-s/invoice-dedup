@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Upload Invoice</title></head>
+<body>
+    <h1>Upload Invoice</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload</button>
+    </form>
+
+    <h2>Uploaded Invoices</h2>
+<ul>
+    {% for inv in invoices %}
+        <li>
+            {{ inv.invoice_number }} - <strong>{{ inv.status }}</strong>
+            {% if inv.match_score %} (score: {{ inv.match_score|floatformat:1 }}%){% endif %}
+            {% if inv.matched_invoice %} - matches invoice #{{ inv.matched_invoice.invoice_number }}{% endif %}
+            - {{ inv.created_at }}
+        </li>
+    {% endfor %}
+</ul>
+</body>
+</html>
