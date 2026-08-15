@@ -1,24 +1,247 @@
 <!DOCTYPE html>
-<html>
-<head><title>Upload Invoice</title></head>
-<body>
-    <h1>Upload Invoice</h1>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Upload</button>
-    </form>
-
-    <h2>Uploaded Invoices</h2>
-<ul>
-    {% for inv in invoices %}
-        <li>
-            {{ inv.invoice_number }} - <strong>{{ inv.status }}</strong>
-            {% if inv.match_score %} (score: {{ inv.match_score|floatformat:1 }}%){% endif %}
-            {% if inv.matched_invoice %} - matches invoice #{{ inv.matched_invoice.invoice_number }}{% endif %}
-            - {{ inv.created_at }}
-        </li>
-    {% endfor %}
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Upload Invoices - Invoice Dedup</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#d8dadc", "on-primary-fixed": "#131b2e", "background": "#f7f9fb",
+                      "surface-container-low": "#f2f4f6", "error": "#ba1a1a", "tertiary": "#000000",
+                      "surface-tint": "#565e74", "on-tertiary": "#ffffff", "tertiary-container": "#0b1c30",
+                      "on-error": "#ffffff", "on-surface-variant": "#45464d", "error-container": "#ffdad6",
+                      "surface-container-lowest": "#ffffff", "surface-container-highest": "#e0e3e5",
+                      "secondary": "#0051d5", "tertiary-fixed": "#d3e4fe", "surface": "#f7f9fb",
+                      "on-tertiary-fixed-variant": "#38485d", "on-background": "#191c1e",
+                      "inverse-surface": "#2d3133", "on-primary": "#ffffff", "secondary-fixed-dim": "#b4c5ff",
+                      "on-secondary-container": "#fefcff", "surface-variant": "#e0e3e5",
+                      "on-tertiary-fixed": "#0b1c30", "surface-container": "#eceef0",
+                      "on-secondary-fixed-variant": "#003ea8", "primary-fixed": "#dae2fd",
+                      "on-tertiary-container": "#75859d", "outline": "#76777d", "on-secondary-fixed": "#00174b",
+                      "on-primary-fixed-variant": "#3f465c", "secondary-fixed": "#dbe1ff", "on-secondary": "#ffffff",
+                      "primary-fixed-dim": "#bec6e0", "surface-container-high": "#e6e8ea", "on-surface": "#191c1e",
+                      "inverse-primary": "#bec6e0", "tertiary-fixed-dim": "#b7c8e1", "secondary-container": "#316bf3",
+                      "outline-variant": "#c6c6cd", "on-primary-container": "#7c839b", "surface-bright": "#f7f9fb",
+                      "inverse-on-surface": "#eff1f3", "primary-container": "#131b2e", "on-error-container": "#93000a",
+                      "primary": "#000000"
+              },
+              "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+              "spacing": {
+                      "margin-page": "2rem", "unit-xl": "2.5rem", "container-max": "1440px", "gutter": "1.5rem",
+                      "unit-lg": "1.5rem", "unit-xs": "0.25rem", "unit-sm": "0.5rem", "unit-md": "1rem"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"], "headline-lg": ["Inter"], "label-md": ["Inter"], "body-lg": ["Inter"],
+                      "mono-sm": ["JetBrains Mono"], "headline-md": ["Inter"], "headline-lg-mobile": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        .drag-active { border-color: #0051d5; background-color: #f0f4ff; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex">
+<nav class="hidden md:flex bg-surface-container-lowest border-r border-surface-container-highest h-screen w-64 flex-col py-unit-lg fixed left-0 top-0 z-20">
+<div class="px-gutter mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Invoice Dedup</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Accounts Payable</p>
+</div>
+</div>
+<div class="px-gutter mb-6">
+<button onclick="document.getElementById('fileInput').click()" class="w-full bg-primary hover:bg-on-primary-fixed text-on-primary font-label-md text-label-md py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">upload</span>
+                Upload Invoice
+            </button>
+</div>
+<ul class="flex-1 flex flex-col gap-1 px-3">
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary font-bold border-r-4 border-secondary bg-surface-container-low transition-colors font-label-md text-label-md group" href="{% url 'upload_invoice' %}">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">description</span>
+                    Invoices
+                </a>
+</li>
+{% if user.is_staff %}
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors font-label-md text-label-md group" href="{% url 'review_queue' %}">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors" style="font-variation-settings: 'FILL' 0;">content_copy</span>
+                    Dedup Queue
+                </a>
+</li>
+{% endif %}
 </ul>
-</body>
-</html>
+<ul class="flex flex-col gap-1 px-3 mt-auto pt-6 border-t border-surface-container-highest">
+<li>
+<form method="post" action="{% url 'logout' %}">
+{% csrf_token %}
+<button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors font-label-md text-label-md text-left">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+                    Log Out
+                </button>
+</form>
+</li>
+</ul>
+</nav>
+<div class="flex-1 flex flex-col md:ml-64 min-w-0">
+<header class="bg-surface border-b border-surface-container-highest flex justify-between items-center w-full px-margin-page h-16 sticky top-0 z-10 shadow-sm max-w-container-max mx-auto w-full">
+<div class="flex-1 flex items-center">
+<div class="relative w-64 max-w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-full text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-shadow text-on-surface placeholder:text-on-surface-variant" placeholder="Search invoices..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0">
+<span class="font-label-md text-label-md text-on-surface-variant">Hi, {{ user.username }}</span>
+</div>
+</header>
+<main class="flex-1 p-margin-page max-w-container-max mx-auto w-full">
+<div class="mb-8">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-2">Upload Invoices</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Securely upload documents for automated deduplication and processing.</p>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+<div class="xl:col-span-2 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] p-unit-lg h-[400px] flex flex-col">
+<div class="flex items-center justify-between mb-4 border-b border-surface-container-low pb-4">
+<h3 class="font-headline-md text-headline-md text-on-background">File Upload</h3>
+<span class="font-label-md text-label-md text-on-surface-variant px-3 py-1 bg-surface-container rounded-full">JPEG, PNG</span>
+</div>
+<form method="post" enctype="multipart/form-data" action="{% url 'upload_invoice' %}" class="flex-1 flex flex-col" id="uploadForm">
+{% csrf_token %}
+<div class="flex-1 border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-4 transition-all duration-200 hover:border-secondary hover:bg-surface-container cursor-pointer group" id="dropzone">
+<div class="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center group-hover:bg-secondary-container transition-colors">
+<span class="material-symbols-outlined text-3xl text-on-surface-variant group-hover:text-on-secondary-container" style="font-variation-settings: 'FILL' 0;">cloud_upload</span>
+</div>
+<div class="text-center">
+<p class="font-body-lg text-body-lg text-on-background mb-1" id="fileLabel">Drag &amp; drop invoice here or click to browse</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Supported formats: JPG, PNG</p>
+</div>
+<label for="fileInput" class="mt-4 bg-primary text-on-primary px-6 py-2 rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed transition-colors shadow-sm cursor-pointer">
+                                Select File
+                            </label>
+<input accept=".jpg,.jpeg,.png" class="hidden" id="fileInput" name="image" type="file" required/>
+</div>
+<button type="submit" class="mt-4 w-full bg-secondary text-white py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-colors">
+                            Upload
+                        </button>
+</form>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] overflow-hidden">
+<div class="p-unit-lg border-b border-surface-container-low flex justify-between items-center bg-surface-bright">
+<h3 class="font-headline-md text-headline-md text-on-background">Recent Uploads</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest border-b border-surface-variant">
+<th class="py-3 px-6 font-label-md text-label-md uppercase text-on-surface-variant font-semibold">Invoice Number</th>
+<th class="py-3 px-6 font-label-md text-label-md uppercase text-on-surface-variant font-semibold">Status</th>
+<th class="py-3 px-6 font-label-md text-label-md uppercase text-on-surface-variant font-semibold">Match Score</th>
+<th class="py-3 px-6 font-label-md text-label-md uppercase text-on-surface-variant font-semibold">Upload Date</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+{% for inv in invoices %}
+<tr class="border-b border-surface-container-low hover:bg-surface-bright transition-colors group">
+<td class="py-4 px-6 text-on-background font-medium">{{ inv.invoice_number }}</td>
+<td class="py-4 px-6">
+{% if inv.status == 'new' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">New</span>
+{% elif inv.status == 'review' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Review</span>
+{% elif inv.status == 'duplicate' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Duplicate</span>
+{% endif %}
+</td>
+<td class="py-4 px-6">
+{% if inv.match_score %}
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="{% if inv.status == 'duplicate' %}bg-red-500{% elif inv.status == 'review' %}bg-yellow-500{% else %}bg-green-500{% endif %} h-full" style="width: {{ inv.match_score }}%"></div>
+</div>
+<span class="font-mono-sm text-mono-sm text-on-surface-variant">{{ inv.match_score|floatformat:0 }}%</span>
+</div>
+{% else %}
+<span class="text-on-surface-variant">--</span>
+{% endif %}
+</td>
+<td class="py-4 px-6 text-on-surface-variant">{{ inv.created_at|date:"M d, Y H:i" }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="py-6 px-6 text-center text-on-surface-variant">No invoices uploaded yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] p-unit-lg">
+<h3 class="font-headline-md text-headline-md text-on-background mb-4 pb-4 border-b border-surface-container-low">Total Invoices</h3>
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">upload_file</span>
+<span class="font-body-md text-body-md">Uploaded</span>
+</div>
+<span class="font-body-lg text-body-lg font-semibold text-on-background">{{ invoices|length }}</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileLabel = document.getElementById('fileLabel');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('drag-active');
+        });
+
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-active');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                fileLabel.textContent = e.dataTransfer.files[0].name;
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileLabel.textContent = e.target.files[0].name;
+            }
+        });
+    </script>
+</body></html>
