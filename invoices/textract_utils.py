@@ -12,13 +12,14 @@ def get_textract_client():
     )
 
 
-# Maps Textract's field labels to our own field names
-FIELD_MAP = {
+# Fields we care about, in priority order for amount (first found wins)
+AMOUNT_FIELD_PRIORITY = ['AMOUNT_DUE', 'TOTAL']
+DATE_FIELD_PRIORITY = ['INVOICE_RECEIPT_DATE', 'DUE_DATE']
+
+SIMPLE_FIELD_MAP = {
     'INVOICE_RECEIPT_ID': 'invoice_number',
     'VENDOR_NAME': 'seller_name',
     'RECEIVER_NAME': 'client_name',
-    'INVOICE_RECEIPT_DATE': 'invoice_date',
-    'TOTAL': 'total_amount',
 }
 
 
@@ -43,26 +44,38 @@ def extract_invoice_fields(file_bytes):
 
     summary_fields = response['ExpenseDocuments'][0].get('SummaryFields', [])
 
+    # Collect all fields by type first, since some types can appear more than once
+    fields_by_type = {}
     for field in summary_fields:
         field_type = field.get('Type', {}).get('Text', '')
         value = field.get('ValueDetection', {}).get('Text', '')
+        if field_type and value:
+            fields_by_type.setdefault(field_type, []).append(value)
 
-        if field_type in FIELD_MAP:
-            key = FIELD_MAP[field_type]
+    # Simple 1:1 fields
+    for textract_type, our_key in SIMPLE_FIELD_MAP.items():
+        if textract_type in fields_by_type:
+            result[our_key] = fields_by_type[textract_type][0]
 
-            if key == 'invoice_date':
-                result[key] = _parse_date(value)
-            elif key == 'total_amount':
-                result[key] = _parse_amount(value)
-            else:
-                result[key] = value
+    # Amount: try AMOUNT_DUE first, fall back to TOTAL
+    for field_type in AMOUNT_FIELD_PRIORITY:
+        if field_type in fields_by_type:
+            result['total_amount'] = _parse_amount(fields_by_type[field_type][0])
+            break
+
+    # Date: try INVOICE_RECEIPT_DATE first, fall back to DUE_DATE
+    for field_type in DATE_FIELD_PRIORITY:
+        if field_type in fields_by_type:
+            parsed = _parse_date(fields_by_type[field_type][0])
+            if parsed:
+                result['invoice_date'] = parsed
+                break
 
     return result
 
 
 def _parse_date(value):
-    # Textract dates can come in various formats - try common ones
-    for fmt in ('%m/%d/%Y', '%Y-%m-%d', '%d/%m/%Y', '%B %d, %Y'):
+    for fmt in ('%m/%d/%Y', '%Y-%m-%d', '%d/%m/%Y', '%B %d, %Y', '%d-%b-%y', '%d-%b-%Y'):
         try:
             return datetime.strptime(value, fmt).date()
         except ValueError:
@@ -71,19 +84,16 @@ def _parse_date(value):
 
 
 def _parse_amount(value):
-    # Keep only digits, commas, and periods
     cleaned = ''.join(c for c in value if c.isdigit() or c in '.,')
     if not cleaned:
         return 0
 
     if ',' in cleaned and '.' in cleaned:
-        # Both separators present - whichever comes LAST is the decimal point
         if cleaned.rfind(',') > cleaned.rfind('.'):
             cleaned = cleaned.replace('.', '').replace(',', '.')
         else:
             cleaned = cleaned.replace(',', '')
     elif ',' in cleaned:
-        # Only comma present - if exactly 2 digits follow it, it's a decimal separator
         last_part = cleaned.split(',')[-1]
         if len(last_part) == 2:
             cleaned = cleaned.replace(',', '.')
