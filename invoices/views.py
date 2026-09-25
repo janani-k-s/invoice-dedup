@@ -3,7 +3,8 @@ from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
 from .forms import InvoiceUploadForm
 from .models import Invoice
-from .dataset_lookup import get_ground_truth
+from .textract_utils import extract_invoice_fields
+#from .dataset_lookup import get_ground_truth
 from .matching import find_best_match, get_status_from_score, find_best_match_unsaved,get_status_from_score
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -39,21 +40,16 @@ def upload_invoice(request):
             fs = FileSystemStorage(location='media/temp_uploads/')
             temp_filename = fs.save(filename, uploaded_file)
 
-            extracted = get_ground_truth(filename)
-            if extracted:
-                temp_data = {
-                    'invoice_number': extracted['invoice_number'],
-                    'client_name': extracted['client_name'],
-                    'seller_name': extracted['seller_name'],
-                    'invoice_date': str(extracted['invoice_date']) if extracted['invoice_date'] else '',
-                    'total_amount': str(extracted['total_amount']),
-                }
-            else:
-                temp_data = {
-                    'invoice_number': 'UNKNOWN', 'client_name': 'UNKNOWN',
-                    'seller_name': 'UNKNOWN', 'invoice_date': '', 'total_amount': '0',
-                }
-
+            uploaded_file.seek(0)
+            file_bytes = uploaded_file.read()
+            extracted = extract_invoice_fields(file_bytes)
+            temp_data={
+                'invoice_number': extracted['invoice_number'] or 'UNKNOWN',
+                'client_name': extracted['client_name'] or 'UNKNOWN',
+                'seller_name': extracted['seller_name'] or 'UNKNOWN',
+                'invoice_date':str(extracted['invoice_date']) if extracted['invoice_date'] else '',
+                'total_amount': str(extracted['total_amount']),
+            }
             # Build a temporary unsaved Invoice instance just to run matching
             temp_invoice = Invoice(
                 invoice_number=temp_data['invoice_number'],
