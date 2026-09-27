@@ -1,12 +1,116 @@
 <!DOCTYPE html>
-<html>
-<head><title>Login</title></head>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log In — Invoice Dedup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --emerald: #064E4B;
+    --emerald-hover: #053E3C;
+    --champagne: #F8E7C9;
+    --champagne-soft: #FBF3E4;
+    --bg: #FDFAF4;
+    --surface: #FFFFFF;
+    --ink: #16241F;
+    --gray: #6B7A73;
+    --line: #EDE2C9;
+    --red: #B3261E;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--emerald);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 2.2rem 2rem;
+    margin: 1.5rem;
+  }
+  .brand-row { display: flex; align-items: center; gap: 0.55rem; justify-content: center; margin-bottom: 1.6rem; }
+  .brand-mark {
+    width: 30px; height: 30px; background: var(--champagne); border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--emerald); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem;
+  }
+  .brand-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--emerald); }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-align: center;
+    margin: 0 0 0.3rem;
+    color: var(--emerald);
+  }
+  .sub { text-align: center; color: var(--gray); font-size: 0.85rem; margin: 0 0 1.6rem; }
+
+  label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--ink); }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    background: var(--champagne-soft);
+    color: var(--ink);
+  }
+  input:focus { outline: none; border-color: var(--emerald); }
+
+  .btn {
+    width: 100%;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.7rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--emerald);
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--emerald-hover); }
+
+  .footer-text { text-align: center; color: var(--gray); font-size: 0.78rem; margin-top: 1.4rem; }
+  .errorlist { color: var(--red); font-size: 0.8rem; list-style: none; padding: 0; margin: 0 0 1rem; }
+</style>
+</head>
 <body>
-    <h2>Login</h2>
+  <div class="login-card">
+    <div class="brand-row">
+      <div class="brand-mark">I</div>
+      <div class="brand-name">Invoice Dedup</div>
+    </div>
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to continue</p>
+
     <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Log in</button>
+      {% csrf_token %}
+      {% if form.errors %}
+        <ul class="errorlist">
+          <li>Incorrect username or password.</li>
+        </ul>
+      {% endif %}
+      <label for="id_username">Username</label>
+      {{ form.username }}
+      <label for="id_password">Password</label>
+      {{ form.password }}
+      <button type="submit" class="btn">Log in</button>
     </form>
+
+    <p class="footer-text">Contact your admin for access</p>
+  </div>
 </body>
 </html>

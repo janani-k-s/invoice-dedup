@@ -78,10 +78,17 @@ def upload_invoice(request):
     else:
         form = InvoiceUploadForm()
 
+    return render(request, 'invoices/upload.html', {'form': form})
+
+@login_required
+def all_invoices(request):
     invoices = Invoice.objects.all().order_by('-created_at')
-    return render(request, 'invoices/upload.html', {'form': form, 'invoices': invoices})
-
-
+    return render(request, 'invoices/all_invoices.html', {
+        'invoices': invoices,
+        'new_count': invoices.filter(status='new').count(),
+        'review_count': invoices.filter(status='review').count(),
+        'duplicate_count': invoices.filter(status='duplicate').count(),
+    })
 @login_required
 def confirm_upload(request):
     """Called when user clicks 'Save anyway' on the duplicate warning page."""

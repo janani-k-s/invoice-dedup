@@ -1,0 +1,100 @@
+{% extends 'invoices/base_console.html' %}
+
+{% block title %}All Invoices — Invoice Dedup{% endblock %}
+
+{% block breadcrumb %}<b>All Invoices</b>{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'upload_invoice' %}" class="btn">＋ Upload invoice</a>
+{% endblock %}
+
+{% block extra_style %}
+  .page-head { margin-bottom: 1.2rem; }
+  .page-head h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin: 0 0 0.15rem;
+    color: var(--emerald);
+  }
+  .page-head p { margin: 0; color: var(--gray); font-size: 0.85rem; }
+
+  .stat-strip { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .stat-pill {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0.5rem 0.9rem; font-size: 0.78rem; color: var(--gray);
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .stat-pill b { font-family: 'JetBrains Mono', monospace; color: var(--ink); font-size: 0.85rem; }
+  .stat-pill.green b { color: var(--green); }
+  .stat-pill.amber b { color: var(--amber); }
+  .stat-pill.red b { color: var(--red); }
+
+  .table-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-weight: 600; font-size: 0.68rem; letter-spacing: 0.02em;
+    color: var(--gray); padding: 0.6rem 0.9rem; background: var(--champagne-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  thead th.num { text-align: right; }
+  tbody td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; vertical-align: middle; }
+  tbody tr:hover { background: #FDFAF4; }
+  tbody tr:last-child td { border-bottom: none; }
+  .inv-num { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 0.8rem; }
+  .amount { font-family: 'JetBrains Mono', monospace; text-align: right; font-weight: 600; font-size: 0.82rem; }
+  .seller { color: var(--gray); }
+  .date { color: var(--gray); font-size: 0.76rem; }
+  .empty-state { padding: 2.5rem; text-align: center; color: var(--gray); font-size: 0.9rem; }
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>All Invoices</h1>
+  <p>Every invoice checked against what's already on file.</p>
+</div>
+
+<div class="stat-strip">
+  <div class="stat-pill">Total <b>{{ invoices|length }}</b></div>
+  <div class="stat-pill green">New <b>{{ new_count }}</b></div>
+  <div class="stat-pill amber">Review <b>{{ review_count }}</b></div>
+  <div class="stat-pill red">Duplicates <b>{{ duplicate_count }}</b></div>
+</div>
+
+<div class="table-card">
+  {% if invoices %}
+  <table>
+    <thead>
+      <tr>
+        <th>Invoice №</th>
+        <th>Seller</th>
+        <th class="num">Amount</th>
+        <th>Status</th>
+        <th>Uploaded</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td class="inv-num">{{ inv.invoice_number }}</td>
+        <td class="seller">{{ inv.seller_name }}</td>
+        <td class="amount">${{ inv.total_amount }}</td>
+        <td>
+          {% if inv.status == 'new' %}
+            <span class="chip chip-new">New</span>
+          {% elif inv.status == 'review' %}
+            <span class="chip chip-review">Review{% if inv.match_score %} · {{ inv.match_score|floatformat:0 }}%{% endif %}</span>
+          {% elif inv.status == 'duplicate' %}
+            <span class="chip chip-duplicate">Duplicate{% if inv.match_score %} · {{ inv.match_score|floatformat:0 }}%{% endif %}</span>
+          {% endif %}
+        </td>
+        <td class="date">{{ inv.created_at|date:"M d, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No invoices uploaded yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

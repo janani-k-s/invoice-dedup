@@ -24,6 +24,7 @@ from invoices import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('upload/', views.upload_invoice, name='upload_invoice'),
+     path('invoices/', views.all_invoices, name='all_invoices'),
     path('review/', views.review_queue, name='review_queue'),
     path('review/<int:invoice_id>/', views.review_decision, name='review_decision'),
     path('accounts/', include('django.contrib.auth.urls')),
