@@ -109,6 +109,23 @@
   .chip-review { background: var(--amber-tint); color: var(--amber); }
   .chip-duplicate { background: var(--red-tint); color: var(--red); }
 
+    .toast-stack {
+    position: fixed; top: 1rem; right: 1rem; z-index: 1000;
+    display: flex; flex-direction: column; gap: 0.5rem; max-width: 360px;
+  }
+  .toast {
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid;
+    font-size: 0.85rem; line-height: 1.4; font-weight: 600;
+    box-shadow: 0 6px 18px rgba(6, 78, 75, 0.15);
+    transition: opacity 0.4s;
+  }
+  .toast span { flex: 1; }
+  .toast-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: inherit; padding: 0; }
+  .toast-success { background: #E7F6EC; color: #14532D; border-color: #BFE5CC; }
+  .toast-warning { background: #FBF0DE; color: #7A4A06; border-color: #EBCF9E; }
+  .toast-error { background: #FBEAE8; color: #8E1D17; border-color: #F0BDB9; }
+  .toast-info { background: #FBF3E4; color: #064E4B; border-color: #EDE2C9; }
   {% block extra_style %}{% endblock %}
 </style>
 </head>
@@ -152,6 +169,23 @@
     {% block content %}{% endblock %}
   </main>
 </div>
-
+{% if messages %}
+<div class="toast-stack">
+  {% for message in messages %}
+  <div class="toast toast-{{ message.tags }}">
+    <span>{{ message }}</span>
+    <button type="button" class="toast-close" onclick="this.parentElement.remove()">×</button>
+  </div>
+  {% endfor %}
+</div>
+<script>
+  setTimeout(function () {
+    document.querySelectorAll('.toast').forEach(function (t) {
+      t.style.opacity = '0';
+      setTimeout(function () { t.remove(); }, 400);
+    });
+  }, 5000);
+</script>
+{% endif %}
 </body>
 </html>

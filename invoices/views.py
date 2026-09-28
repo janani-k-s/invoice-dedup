@@ -7,6 +7,7 @@ from .textract_utils import extract_invoice_fields
 #from .dataset_lookup import get_ground_truth
 from .matching import find_best_match, get_status_from_score, find_best_match_unsaved,get_status_from_score
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 
 @staff_member_required
 def review_queue(request):
@@ -21,9 +22,10 @@ def review_decision(request, invoice_id):
 
         if decision == 'approve':
             invoice.status = 'new'
+            messages.success(request, f"Invoice {invoice.invoice_number} approved as new.")
         elif decision == 'reject':
             invoice.status = 'duplicate'
-
+            messages.success(request, f"Invoice {invoice.invoice_number} marked as duplicate.")
         invoice.save()
 
     return redirect('review_queue')
@@ -116,6 +118,7 @@ def cancel_upload(request):
         fs = FileSystemStorage(location='media/temp_uploads/')
         fs.delete(pending['temp_filename'])
         del request.session['pending_invoice']
+        messages.info(request, "Upload cancelled. Nothing was saved.")
     return redirect('upload_invoice')
 
 
@@ -144,3 +147,9 @@ def _save_invoice_from_temp(request, temp_filename, original_filename, data, mat
     invoice.save()
 
     fs.delete(temp_filename)
+    if invoice.status == 'new':
+        messages.success(request, f"Invoice {invoice.invoice_number} uploaded successfully.")
+    elif invoice.status == 'review':
+        messages.warning(request, f"Invoice {invoice.invoice_number} uploaded, but it looks similar to an existing one ({score:.0f}% match). It has been sent to the review queue.")
+    else:
+        messages.error(request, f"Invoice {invoice.invoice_number} was saved as a duplicate ({score:.0f}% match).")
