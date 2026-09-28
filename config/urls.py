@@ -19,9 +19,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from invoices import views
+from django.views.generic import RedirectView
 
 
 urlpatterns = [
+    path('', RedirectView.as_view(pattern_name='login', permanent=False)),
     path('admin/', admin.site.urls),
     path('upload/', views.upload_invoice, name='upload_invoice'),
      path('invoices/', views.all_invoices, name='all_invoices'),
