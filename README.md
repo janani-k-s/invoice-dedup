@@ -2,9 +2,6 @@
 
 A duplicate invoice detection system for teams. Upload an invoice image and the system reads it, checks it against every invoice already on file, and flags exact and near-duplicates before they get processed twice.
 
-**Live demo:** https://invoice-dedup.onrender.com/upload/
-*(Hosted on a free tier. The first visit after a period of inactivity can take 30-60 seconds to wake up.)*
-
 ## How it works
 
 1. A logged-in user uploads an invoice image (JPG or PNG)
