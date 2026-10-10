@@ -4,13 +4,11 @@ from django.conf import settings
 
 
 def get_textract_client():
-    return boto3.client(
-        'textract',
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_REGION,
-    )
-
+    kwargs = {'region_name': settings.AWS_REGION}
+    if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+        kwargs['aws_access_key_id'] = settings.AWS_ACCESS_KEY_ID
+        kwargs['aws_secret_access_key'] = settings.AWS_SECRET_ACCESS_KEY
+    return boto3.client('textract', **kwargs)
 
 # Fields we care about, in priority order for amount (first found wins)
 AMOUNT_FIELD_PRIORITY = ['AMOUNT_DUE', 'TOTAL']
