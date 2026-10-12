@@ -145,6 +145,27 @@ The app runs on Render with a Neon PostgreSQL database.
 - Set the environment variables listed above in Render's dashboard
 - Run `python manage.py migrate` against the production database once (with `DATABASE_URL` set) and create a superuser
 
+## Deploying on AWS Elastic Beanstalk
+
+TwinCheck also runs on Elastic Beanstalk (Python 3.13 on Amazon Linux 2023, single instance).
+
+**Project files**
+- `.ebextensions/django.config`: sets the WSGI path and runs `collectstatic` and `migrate` on each deploy
+- `.platform/nginx/conf.d/client_max_body_size.conf`: raises nginx's upload limit from 1 MB to 10 MB
+
+**Steps**
+1. Install the EB CLI in its own virtual environment, separate from the project's
+2. `eb init`: region `us-east-1`, application `twincheck`, platform Python 3.13 on Amazon Linux 2023
+3. `eb create twincheck-env --single --sample -i t3.small`
+4. Add an inline policy to the environment's instance role (the S3 and Textract policy from the AWS setup section above)
+5. Set environment properties in the console: `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS=.elasticbeanstalk.com`, `CSRF_TRUSTED_ORIGINS=http://*.elasticbeanstalk.com`, `DATABASE_URL`, `AWS_REGION`, `AWS_S3_BUCKET_NAME`. Do not set AWS access keys, because the instance role supplies credentials.
+6. Commit, then `eb deploy`. It deploys the latest commit of the current branch.
+7. `eb terminate twincheck-env` stops all charges
+
+**Notes**
+- Without a custom domain the environment serves plain HTTP only
+- A single instance is used because temporary upload files live on local disk
+
 ## Known limitations
 
 - **English-language invoices only.** Textract's `AnalyzeExpense` supports English for structured invoice fields. Other languages may extract poorly. The Review Queue acts as a safety net.
@@ -155,6 +176,7 @@ The app runs on Render with a Neon PostgreSQL database.
 - **Pending confirmations are short-lived.** A file waiting on the duplicate confirmation page is held temporarily on the server's disk and is lost if the server restarts before the user responds.
 - **Free-tier hosting.** Cold starts after inactivity, and the database has usage limits.
 - **No automated test suite yet.**
+- **Elastic Beanstalk demo is HTTP only** until a custom domain and certificate are added.
 
 ## Roadmap
 
