@@ -73,17 +73,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-
 DATABASE_URL = config('DATABASE_URL', default='')
+RDS_HOSTNAME = config('RDS_HOSTNAME', default='')
 
 if DATABASE_URL:
-    # Deployed / Neon
+    # Render / Neon (unchanged)
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL)
     }
+elif RDS_HOSTNAME:
+    # AWS Elastic Beanstalk with RDS PostgreSQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('RDS_DB_NAME'),
+            'USER': config('RDS_USERNAME'),
+            'PASSWORD': config('RDS_PASSWORD'),
+            'HOST': RDS_HOSTNAME,
+            'PORT': config('RDS_PORT', default='5432'),
+            'OPTIONS': {'sslmode': 'require'},
+        }
+    }
 else:
-    # Local development
+    # Local development (unchanged)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -94,7 +106,6 @@ else:
             'PORT': config('DB_PORT'),
         }
     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
