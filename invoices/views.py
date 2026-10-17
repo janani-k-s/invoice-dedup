@@ -5,7 +5,7 @@ from .forms import InvoiceUploadForm
 from .models import Invoice
 from .textract_utils import extract_invoice_fields
 #from .dataset_lookup import get_ground_truth
-from .matching import find_best_match, get_status_from_score, find_best_match_unsaved,get_status_from_score
+from .matching import find_best_match_unsaved, get_status_from_score
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 
@@ -56,6 +56,7 @@ def upload_invoice(request):
             temp_invoice = Invoice(
                 invoice_number=temp_data['invoice_number'],
                 total_amount=temp_data['total_amount'],
+                seller_name=temp_data['seller_name'],
             )
             best_match, best_score = find_best_match_unsaved(temp_invoice)
 
@@ -140,7 +141,6 @@ def _save_invoice_from_temp(request, temp_filename, original_filename, data, mat
 
     invoice.save()
 
-    _, real_score = find_best_match(invoice)
     invoice.status = get_status_from_score(score)
     invoice.match_score = score
     invoice.matched_invoice = matched_invoice
