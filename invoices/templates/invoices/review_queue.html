@@ -1,3 +1,4 @@
+
 {% extends 'invoices/base_console.html' %}
 
 {% block title %}Review Queue — Invoice Dedup{% endblock %}
@@ -15,37 +16,104 @@
   }
   .page-head p { margin: 0; color: var(--gray); font-size: 0.85rem; }
 
-  .table-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+
   table { width: 100%; border-collapse: collapse; }
   thead th {
-    text-align: left; font-weight: 600; font-size: 0.68rem; letter-spacing: 0.02em;
-    color: var(--gray); padding: 0.6rem 0.9rem; background: var(--champagne-soft);
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    color: var(--gray);
+    padding: 0.6rem 0.9rem;
+    background: var(--champagne-soft);
     border-bottom: 1px solid var(--line);
   }
   thead th.num { text-align: right; }
-  tbody td { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; vertical-align: middle; }
+
+  tbody td {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.85rem;
+    vertical-align: top;
+  }
   tbody tr:last-child td { border-bottom: none; }
-  .inv-num { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 0.8rem; }
-  .amount { font-family: 'JetBrains Mono', monospace; text-align: right; font-weight: 600; font-size: 0.82rem; }
+
+  .inv-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+  .amount {
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
   .seller { color: var(--gray); }
-  .matched-link { color: var(--emerald); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-decoration: none; }
+
+  .matched-link {
+    color: var(--emerald);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
   .matched-link:hover { text-decoration: underline; }
-  .empty-state { padding: 2.5rem; text-align: center; color: var(--gray); font-size: 0.9rem; }
+
+  .empty-state {
+    padding: 2.5rem;
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.9rem;
+  }
+
   .action-form { display: inline-flex; gap: 0.4rem; }
   .btn-sm {
-    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.76rem;
-    padding: 0.4rem 0.8rem; border-radius: 6px; border: none; cursor: pointer;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 0.76rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
   }
   .btn-approve { background: var(--green-tint); color: var(--green); }
   .btn-approve:hover { background: #D6F0DE; }
   .btn-reject { background: var(--red-tint); color: var(--red); }
   .btn-reject:hover { background: #F7D9D6; }
+
+  .reason-list {
+    margin-top: 0.6rem;
+    padding: 0.6rem;
+    background: var(--champagne-soft);
+    border-radius: 6px;
+    min-width: 190px;
+  }
+  .reason-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    color: var(--gray);
+  }
+  .reason-item {
+    font-size: 0.72rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .reason-match { color: var(--green); }
+  .reason-different { color: var(--red); }
+  .reason-detail { color: var(--gray); }
 {% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1>Invoices Needing Review</h1>
-  <p>Matches between 70% and 95% similarity — confirm whether each is a real duplicate.</p>
+  <p>Potential duplicates need human verification. Compare the fields below before making a decision.</p>
 </div>
 
 <div class="table-card">
@@ -56,7 +124,7 @@
         <th>Invoice №</th>
         <th>Seller</th>
         <th class="num">Amount</th>
-        <th>Match Score</th>
+        <th>Match Score &amp; Reasons</th>
         <th>Matched Invoice</th>
         <th>Uploaded By</th>
         <th>Actions</th>
@@ -65,23 +133,75 @@
     <tbody>
       {% for inv in invoices %}
       <tr>
-        <td class="inv-num">{{ inv.invoice_number }}</td>
-        <td class="seller">{{ inv.seller_name }}</td>
+        <td class="inv-num">{{ inv.invoice_number|default:"Unknown" }}</td>
+        <td class="seller">{{ inv.seller_name|default:"Unknown" }}</td>
         <td class="amount">${{ inv.total_amount }}</td>
-        <td class="chip chip-review">{{ inv.match_score|floatformat:0 }}%</td>
+
+        <td>
+          <span class="chip chip-review">
+            {{ inv.match_score|floatformat:0 }}%
+          </span>
+
+          {% if inv.matched_invoice %}
+          <div class="reason-list">
+            <div class="reason-title">Comparison with existing invoice</div>
+
+            {% if inv.invoice_number|default:""|lower == inv.matched_invoice.invoice_number|default:""|lower %}
+              <div class="reason-item reason-match">✓ Invoice number matches</div>
+            {% else %}
+              <div class="reason-item reason-different">✗ Invoice number differs</div>
+            {% endif %}
+
+            {% if inv.seller_name|default:""|lower == inv.matched_invoice.seller_name|default:""|lower %}
+              <div class="reason-item reason-match">✓ Vendor matches</div>
+            {% else %}
+              <div class="reason-item reason-different">✗ Vendor differs</div>
+            {% endif %}
+
+            {% if inv.total_amount == inv.matched_invoice.total_amount %}
+              <div class="reason-item reason-match">✓ Amount matches</div>
+            {% else %}
+              <div class="reason-item reason-different">✗ Amount differs</div>
+            {% endif %}
+
+            {% if inv.invoice_date and inv.invoice_date == inv.matched_invoice.invoice_date %}
+              <div class="reason-item reason-match">✓ Invoice date matches</div>
+            {% else %}
+              <div class="reason-item reason-different">✗ Invoice date differs or is missing</div>
+            {% endif %}
+
+            <div class="reason-detail" style="margin-top: 0.4rem;">
+              Existing vendor: {{ inv.matched_invoice.seller_name|default:"Unknown" }}
+            </div>
+          </div>
+          {% else %}
+            <div class="reason-detail" style="margin-top: 0.4rem;">
+              No linked matching invoice is available for comparison.
+            </div>
+          {% endif %}
+        </td>
+
         <td>
           {% if inv.matched_invoice %}
-            <span class="matched-link">{{ inv.matched_invoice.invoice_number }}</span>
+            <span class="matched-link">
+              {{ inv.matched_invoice.invoice_number }}
+            </span>
           {% else %}
             —
           {% endif %}
         </td>
+
         <td class="seller">{{ inv.uploaded_by }}</td>
+
         <td>
-          <form method="post" action="{% url 'review_decision' inv.id %}" class="action-form">
+          <form method="post"
+                action="{% url 'review_decision' inv.id %}"
+                class="action-form">
             {% csrf_token %}
-            <button type="submit" name="decision" value="approve" class="btn-sm btn-approve">Approve</button>
-            <button type="submit" name="decision" value="reject" class="btn-sm btn-reject">Reject</button>
+            <button type="submit" name="decision" value="approve"
+                    class="btn-sm btn-approve">Approve</button>
+            <button type="submit" name="decision" value="reject"
+                    class="btn-sm btn-reject">Reject</button>
           </form>
         </td>
       </tr>
@@ -89,7 +209,7 @@
     </tbody>
   </table>
   {% else %}
-  <div class="empty-state">No invoices currently need review.</div>
+    <div class="empty-state">No invoices currently need review.</div>
   {% endif %}
 </div>
 {% endblock %}
