@@ -15,7 +15,7 @@ class Invoice(models.Model):
     invoice_date = models.DateField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
 
-    image=models.ImageField(upload_to='invoices/', null=True, blank=True)
+    image=models.FileField(upload_to='invoices/', null=True, blank=True)
     uploaded_by=models.ForeignKey(User, on_delete=models.CASCADE)
 
     status=models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')

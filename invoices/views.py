@@ -5,9 +5,11 @@ from .forms import InvoiceUploadForm
 from .models import Invoice
 from .textract_utils import extract_invoice_fields
 #from .dataset_lookup import get_ground_truth
-from .matching import find_best_match, get_status_from_score, find_best_match_unsaved,get_status_from_score
+from .matching import find_best_match_unsaved, get_status_from_score
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
+import csv
+from django.http import HttpResponse
 
 @staff_member_required
 def review_queue(request):
@@ -56,6 +58,8 @@ def upload_invoice(request):
             temp_invoice = Invoice(
                 invoice_number=temp_data['invoice_number'],
                 total_amount=temp_data['total_amount'],
+                seller_name=temp_data['seller_name'],
+                invoice_date=temp_data['invoice_date'] or None,
             )
             best_match, best_score = find_best_match_unsaved(temp_invoice)
 
@@ -140,7 +144,6 @@ def _save_invoice_from_temp(request, temp_filename, original_filename, data, mat
 
     invoice.save()
 
-    _, real_score = find_best_match(invoice)
     invoice.status = get_status_from_score(score)
     invoice.match_score = score
     invoice.matched_invoice = matched_invoice
@@ -153,3 +156,41 @@ def _save_invoice_from_temp(request, temp_filename, original_filename, data, mat
         messages.warning(request, f"Invoice {invoice.invoice_number} uploaded, but it looks similar to an existing one ({score:.0f}% match). It has been sent to the review queue.")
     else:
         messages.error(request, f"Invoice {invoice.invoice_number} was saved as a duplicate ({score:.0f}% match).")
+
+@login_required
+def export_invoices_csv(request):
+    invoices = Invoice.objects.all().order_by('-created_at')
+
+    response = HttpResponse(
+        content_type='text/csv; charset=utf-8'
+    )
+    response['Content-Disposition'] = (
+        'attachment; filename="twincheck_invoices.csv"'
+    )
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Invoice Number',
+        'Client',
+        'Seller',
+        'Invoice Date',
+        'Total Amount',
+        'Status',
+        'Match Score',
+        'Created At',
+    ])
+
+    for invoice in invoices:
+        writer.writerow([
+            invoice.invoice_number,
+            invoice.client_name,
+            invoice.seller_name,
+            invoice.invoice_date or '',
+            invoice.total_amount,
+            invoice.status,
+            invoice.match_score if invoice.match_score is not None else '',
+            invoice.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        ])
+
+    return response

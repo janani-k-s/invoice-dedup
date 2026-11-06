@@ -26,12 +26,13 @@ urlpatterns = [
     path('', RedirectView.as_view(pattern_name='login', permanent=False)),
     path('admin/', admin.site.urls),
     path('upload/', views.upload_invoice, name='upload_invoice'),
-     path('invoices/', views.all_invoices, name='all_invoices'),
+    path('invoices/', views.all_invoices, name='all_invoices'),
     path('review/', views.review_queue, name='review_queue'),
     path('review/<int:invoice_id>/', views.review_decision, name='review_decision'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('upload/confirm/', views.confirm_upload, name='confirm_upload'),
     path('upload/cancel/', views.cancel_upload, name='cancel_upload'),
+    path('invoices/export/csv/', views.export_invoices_csv, name='export_invoices_csv'),
 ]
 
 
